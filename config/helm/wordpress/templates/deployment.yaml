@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ilcittadinomb-stage
+  name: ilcittadinomb-stage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      serviceAccountName: ilcittadinomb-stage
+      containers:
+        - name: wordpress
+          image: '{{ .Values.phpfpm.image }}:{{ .Values.version  }}'
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9000
+              name: http
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: app-configmap
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /var/www/html/wp-content/uploads
+        - name: nginx
+          image: '{{ .Values.nginx.image }}:{{ .Values.version  }}'
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ck_status.html
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 10
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /var/www/html/wp-content/uploads
+      restartPolicy: Always
+      volumes:
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: efs-claim

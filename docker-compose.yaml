@@ -1,0 +1,79 @@
+version: '3'
+
+services:
+  database:
+    image: mariadb:10.6.4
+    container_name: ${APP_NAME}_database
+    env_file:
+      - .env
+    volumes:
+      - ./config/loc/database/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - database-data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    networks:
+      - app-network
+
+  tools:
+    build:
+      dockerfile: config/loc/images/tools/Dockerfile
+      context: .
+      args:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_DEFAULT_REGION      
+    container_name: ${APP_NAME}_tools
+    env_file:
+      - .env
+    volumes:
+      - ./config/loc/images/tools/src/composer.json:/tools/composer.json
+      - ./config/loc/images/tools/src/composer.lock:/tools/composer.lock
+      - ./import:/tools/import
+      - ./scripts:/tools/scripts
+      - ./.env:/tools/.env
+      - ./src/:/tools/app
+    networks:
+      - app-network
+    ports:
+      - 3000:3000
+      - 3001:3001
+    depends_on:
+      - database
+
+  php-fpm:
+    build:
+      dockerfile: config/loc/images/php/Dockerfile
+      context: .
+    container_name: ${APP_NAME}_php-fpm
+    volumes:
+      - ./src:/var/www/html
+      - ./.env:/var/www/.env
+    env_file:
+      - .env
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:1.21.3-alpine
+    container_name: ${APP_NAME}_nginx
+    volumes:
+      - ./config/loc/images/nginx:/etc/nginx/templates
+      - ./src:/var/www/html
+    depends_on:
+      - database
+      - php-fpm
+    ports:
+      - 80:80
+    networks:
+      - app-network
+    environment:
+      - DNSDOCK_ALIAS=ilcittadinomb.${ENV_TYPE}
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  database-data:

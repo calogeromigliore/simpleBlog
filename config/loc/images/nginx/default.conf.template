@@ -1,0 +1,28 @@
+server {
+    listen 80 default_server;
+    server_name _;
+
+    # Root folder
+    root /var/www/html;
+
+    # Default file
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+    
+    # Deny files starting with a . (dot)
+    location ~ /\. {
+        deny all;
+    }
+
+    # PHP handling with FPM
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_pass php-fpm:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}

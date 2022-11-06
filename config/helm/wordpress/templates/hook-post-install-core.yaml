@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-post-install-core
+  annotations:
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook": post-install  
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: {{ .Release.Name }}-post-install-job
+        image: "{{ .Values.phpfpm.image }}:{{ .Values.version  }}"
+        envFrom:
+          - configMapRef:
+              name: app-configmap             
+        command: ["sh", "-c", "wp core install --url={{ .Values.app.url }} --title={{ .Values.app.title }} --admin_user={{ .Values.app.defaults.admin_user }} --admin_password={{ .Values.app.defaults.admin_password }} --admin_email={{ .Values.app.defaults.admin_email }} --allow-root"]     
