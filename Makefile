@@ -12,4 +12,4 @@ destroy:
 	docker-compose down -v
 
 ssh:
-	docker exec -it simpleblog_php-fpm /bin/bash
+	docker exec -e COLUMNS="`tput cols`" -e LINES="`tput lines`" -it -u www-data $(container) /bin/bash
